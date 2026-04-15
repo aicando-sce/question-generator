@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>문항 생성기</title>
+</head>
+<body>
+  <h1>초등 단원평가 문항 생성기</h1>
+  <input type="file" id="pdfUpload" accept=".pdf" multiple>
+  <button onclick="uploadPDFs()">추출하기</button>
+
+  <h2>문항 리스트</h2>
+  <div id="questions"></div>
+
+  <button onclick="downloadTxt()">TXT 다운로드</button>
+  <button onclick="downloadWord()">Word 다운로드</button>
+
+  <script>
+    let questions = [];
+
+    async function uploadPDFs() {
+      const files = document.getElementById("pdfUpload").files;
+      if (!files.length) {
+        alert("PDF 파일을 업로드하세요.");
+        return;
+      }
+
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("pdfs", file);
+      }
+
+      const res = await fetch("http://localhost:3000/upload", {
+        method: "POST",
+        body: formData
+      });
+      questions = await res.json();
+      renderQuestions();
+    }
+
+    function renderQuestions() {
+      const container = document.getElementById("questions");
+      container.innerHTML = "";
+      questions.forEach(q => {
+        container.innerHTML += `
+          <div>
+            <pre>${q.meta}</pre>
+            <p>${q.text}</p>
+            ${q.options.map(o => `<p>${o}</p>`).join("")}
+            <p>${q.answer}</p>
+            <p>${q.explanation}</p>
+          </div>
+        `;
+      });
+    }
+
+    function downloadTxt() {
+      let content = questions.map(q =>
+        `${q.meta}\n${q.text}\n${q.options.join("\n")}\n${q.answer}\n${q.explanation}`
+      ).join("\n\n");
+      let blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      let link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "questions.txt";
+      link.click();
+    }
+
+    function downloadWord() {
+      let content = questions.map(q =>
+        `${q.meta}\n${q.text}\n${q.options.join("\n")}\n${q.answer}\n${q.explanation}`
+      ).join("\n\n");
+      let blob = new Blob([content], { type: "application/msword" });
+      let link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "questions.doc";
+      link.click();
+    }
+  </script>
+</body>
+</html>
